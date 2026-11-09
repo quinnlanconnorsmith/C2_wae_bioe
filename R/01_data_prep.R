@@ -397,12 +397,23 @@ oxygen_interp <- oxygen_vertical %>%
   }) %>%
   ungroup()
 
-# DO experienced by each fish (only the columns the analyses use)
+# DO experienced by each fish (only the columns the analyses use).
+# The DO grid is in whole metres, so fish depth (depth_corr) is
+# rounded to the nearest metre for the join; joining on the exact
+# depth matched only the ~10% of records sitting at a whole metre.
 fish_do <- archival_essp_full %>%
-  filter(!is.na(depth_m), !is.na(date_time)) %>%
-  select(fish_id, lake, date_time, depth_m) %>%
-  left_join(oxygen_interp, by = c("lake", "depth_m", "date_time" = "datetime")) %>%
-  filter(!is.na(do_mgl))
+  filter(!is.na(depth_corr), !is.na(date_time)) %>%
+  transmute(fish_id, lake, date_time, depth_corr,
+            depth_m = round(depth_corr)) %>%
+  left_join(oxygen_interp, by = c("lake", "depth_m", "date_time" = "datetime"))
+
+# Report records with no DO (outside the depths/dates the profiles cover)
+fish_do %>%
+  group_by(lake) %>%
+  summarise(records = n(), missing_do = sum(is.na(do_mgl)), .groups = "drop") %>%
+  print()
+
+fish_do <- fish_do %>% filter(!is.na(do_mgl))
 
 save_derived(oxygen_interp, "oxygen_interp")
 save_derived(fish_do, "fish_do")
@@ -412,3 +423,4 @@ save_derived(fish_do, "fish_do")
 # Restart R (Session > Restart R) before running 02 or 03.
 # ============================================================
 list.files(derived_dir)
+

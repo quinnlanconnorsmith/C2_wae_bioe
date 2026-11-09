@@ -1718,3 +1718,4 @@ quantile_comparison <- bind_rows(
   arrange(metric, lake, distribution, type)
 
 print(quantile_comparison, n = Inf)
+
